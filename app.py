@@ -127,7 +127,6 @@ def buy_property(prop_id):
     message_text = request.form.get('message', '')
 
     conn = get_db_connection()
-    # Check if client has an open conversation for this property
     cursor = conn.cursor()
     cursor.execute(
         "SELECT id FROM conversations WHERE client_email = ? AND property_title = ? AND status = 'Open'",
@@ -189,7 +188,6 @@ def customer_care():
             conv_id = request.form.get('conv_id')
             message_text = request.form.get('message')
             
-            # Verify conversation is still open
             cursor.execute("SELECT status FROM conversations WHERE id = ?", (conv_id,))
             conv = cursor.fetchone()
             if conv and conv['status'] == 'Open':
@@ -234,9 +232,9 @@ def agent_login():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
-        if username == 'admin' and password == 'luxe2026':
+        if username == 'Elder' and password == 'Eyereforma':
             session['agent_logged_in'] = True
-            flash("Welcome back, Agent!", "success")
+            flash("Welcome back, Elder!", "success")
             return redirect(url_for('agent_dashboard'))
         else:
             flash("Invalid username or password.", "danger")
