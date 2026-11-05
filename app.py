@@ -1,14 +1,49 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask_wtf.csrf import CSRFProtect
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import sqlite3
 
 app = Flask(__name__)
-app.secret_key = 'luxe_estate_secret_key'
+app.secret_key = 'luxe_estate_secure_super_secret_key_2026'
+
+# Initialize CSRF Protection
+csrf = CSRFProtect(app)
+
+# Initialize Rate Limiter
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://"
+)
 
 def get_db_connection():
     conn = sqlite3.connect('real_estate.db')
     conn.row_factory = sqlite3.Row
     return conn
+
+def init_admin_user():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS admin_users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL
+        )
+    ''')
+    # Check if Elder exists, if not create with hashed password
+    cursor.execute("SELECT * FROM admin_users WHERE username = 'Elder'")
+    if not cursor.fetchone():
+        hashed_pw = generate_password_hash('Eyereforma')
+        cursor.execute("INSERT INTO admin_users (username, password_hash) VALUES (?, ?)", ('Elder', hashed_pw))
+        conn.commit()
+    conn.close()
+
+init_admin_user()
 
 PROPERTIES = [
     {
@@ -119,6 +154,7 @@ def property_detail(prop_id):
     return render_template('property_detail.html', property=prop)
 
 @app.route('/buy/<int:prop_id>', methods=['POST'])
+@limiter.limit("10 per minute")
 def buy_property(prop_id):
     prop = next((p for p in PROPERTIES if p['id'] == prop_id), None)
     client_name = request.form.get('name')
@@ -155,6 +191,7 @@ def buy_property(prop_id):
     return redirect(url_for('customer_care', conv_id=conv_id))
 
 @app.route('/customer-care', methods=['GET', 'POST'])
+@limiter.limit("20 per minute", methods=['POST'])
 def customer_care():
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -228,11 +265,19 @@ def customer_care():
                            properties=PROPERTIES)
 
 @app.route('/agent/login', methods=['GET', 'POST'])
+@limiter.limit("5 per minute", methods=['POST'])
 def agent_login():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
-        if username == 'Elder' and password == 'Eyereforma':
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM admin_users WHERE username = ?", (username,))
+        admin = cursor.fetchone()
+        conn.close()
+
+        if admin and check_password_hash(admin['password_hash'], password):
             session['agent_logged_in'] = True
             flash("Welcome back, Elder!", "success")
             return redirect(url_for('agent_dashboard'))
