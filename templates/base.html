@@ -30,6 +30,9 @@
                     <li class="nav-item mx-2">
                         <a class="nav-link {% if request.endpoint == 'listings' %}active fw-bold text-warning{% endif %}" href="{{ url_for('listings') }}">All Properties</a>
                     </li>
+                    <li class="nav-item mx-2">
+                        <a class="nav-link {% if request.endpoint == 'customer_care' %}active fw-bold text-warning{% endif %}" href="{{ url_for('customer_care') }}">Customer Care</a>
+                    </li>
                     <li class="nav-item ms-3">
                         <a href="mailto:marinsdivine480@gmail.com" class="btn btn-warning text-dark fw-semibold px-4">Contact Agent</a>
                     </li>
@@ -44,9 +47,10 @@
     </main>
 
     <!-- Footer -->
-    <footer class="text-center">
+    <footer class="text-center py-5 bg-black text-white mt-5">
         <div class="container">
             <p class="mb-2 fw-bold text-white fs-5"><i class="bi bi-house-heart-fill text-warning me-2"></i>LuxeEstate Portal</p>
+            <p class="mb-2"><a href="{{ url_for('customer_care') }}" class="text-warning text-decoration-none fw-semibold">Customer Care & Support Portal</a></p>
             <p class="mb-3 text-muted">Direct Agent Inquiries: <a href="mailto:marinsdivine480@gmail.com" class="text-warning text-decoration-none">marinsdivine480@gmail.com</a></p>
             <p class="small text-secondary mb-0">&copy; 2026 LuxeEstate. All rights reserved.</p>
         </div>

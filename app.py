@@ -1,8 +1,14 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, session
 import os
+import sqlite3
 
 app = Flask(__name__)
 app.secret_key = 'luxe_estate_secret_key'
+
+def get_db_connection():
+    conn = sqlite3.connect('real_estate.db')
+    conn.row_factory = sqlite3.Row
+    return conn
 
 # 10 Detailed properties using reliable Unsplash Source photo IDs directly
 PROPERTIES = [
@@ -121,15 +127,15 @@ def buy_property(prop_id):
     client_phone = request.form.get('phone')
     message = request.form.get('message', '')
 
-    print(f"--- EMAIL TO marinsdivine480@gmail.com ---")
-    print(f"New Purchase/Inquiry for: {prop['title']} ({prop['price']})")
-    print(f"Client Name: {client_name}")
-    print(f"Client Email: {client_email}")
-    print(f"Client Phone: {client_phone}")
-    print(f"Message: {message}")
-    print(f"----------------------------------------")
+    conn = get_db_connection()
+    conn.execute(
+        'INSERT INTO messages (name, email, phone, property_title, message) VALUES (?, ?, ?, ?, ?)',
+        (client_name, client_email, client_phone, prop['title'], message)
+    )
+    conn.commit()
+    conn.close()
 
-    flash(f"Inquiry sent successfully to marinsdivine480@gmail.com for {prop['title']}!", "success")
+    flash(f"Purchase inquiry sent successfully for {prop['title']}! Our customer care team will contact you shortly.", "success")
     return render_template('success.html', property=prop, name=client_name)
 
 @app.route('/contact', methods=['GET', 'POST'])
@@ -138,13 +144,85 @@ def contact():
         name = request.form.get('name')
         email = request.form.get('email')
         message = request.form.get('message')
-        print(f"--- GENERAL CONTACT EMAIL TO marinsdivine480@gmail.com ---")
-        print(f"From: {name} ({email})")
-        print(f"Message: {message}")
-        print(f"----------------------------------------------------")
-        flash("Your message has been sent directly to marinsdivine480@gmail.com!", "success")
+
+        conn = get_db_connection()
+        conn.execute(
+            'INSERT INTO messages (name, email, property_title, message) VALUES (?, ?, ?, ?)',
+            (name, email, 'General Contact', message)
+        )
+        conn.commit()
+        conn.close()
+
+        flash("Your message has been sent successfully to customer care!", "success")
         return redirect(url_for('home'))
     return render_template('contact.html')
+
+@app.route('/customer-care', methods=['GET', 'POST'])
+def customer_care():
+    if request.method == 'POST':
+        name = request.form.get('name')
+        email = request.form.get('email')
+        phone = request.form.get('phone')
+        property_title = request.form.get('property_title') or 'General Support'
+        message = request.form.get('message')
+
+        conn = get_db_connection()
+        conn.execute(
+            'INSERT INTO messages (name, email, phone, property_title, message) VALUES (?, ?, ?, ?, ?)',
+            (name, email, phone, property_title, message)
+        )
+        conn.commit()
+        conn.close()
+
+        flash("Your message has been submitted to Customer Care successfully! We will respond soon.", "success")
+        return redirect(url_for('customer_care'))
+    return render_template('customer_care.html')
+
+@app.route('/agent/login', methods=['GET', 'POST'])
+def agent_login():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        if username == 'admin' and password == 'luxe2026':
+            session['agent_logged_in'] = True
+            flash("Welcome back, Agent!", "success")
+            return redirect(url_for('agent_dashboard'))
+        else:
+            flash("Invalid username or password.", "danger")
+    return render_template('agent_login.html')
+
+@app.route('/agent/dashboard')
+def agent_dashboard():
+    if not session.get('agent_logged_in'):
+        return redirect(url_for('agent_login'))
+    
+    conn = get_db_connection()
+    inquiries = conn.execute('SELECT * FROM messages ORDER BY created_at DESC').fetchall()
+    conn.close()
+    return render_template('agent_dashboard.html', inquiries=inquiries)
+
+@app.route('/agent/reply/<int:msg_id>', methods=['POST'])
+def agent_reply(msg_id):
+    if not session.get('agent_logged_in'):
+        return redirect(url_for('agent_login'))
+    
+    reply_text = request.form.get('reply')
+    conn = get_db_connection()
+    conn.execute(
+        'UPDATE messages SET reply = ?, status = ? WHERE id = ?',
+        (reply_text, 'Replied', msg_id)
+    )
+    conn.commit()
+    conn.close()
+
+    flash("Response saved successfully!", "success")
+    return redirect(url_for('agent_dashboard'))
+
+@app.route('/agent/logout')
+def agent_logout():
+    session.pop('agent_logged_in', None)
+    flash("Logged out successfully.", "success")
+    return redirect(url_for('agent_login'))
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

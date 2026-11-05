@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Customer Care Login - LuxeEstate Portal{% endblock %}
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <div class="card shadow-lg border-0 rounded-4 p-4 p-md-5 bg-white">
+                <div class="text-center mb-4">
+                    <h2 class="fw-bold text-dark">Agent Login</h2>
+                    <p class="text-muted small">Customer Care & Support Portal</p>
+                </div>
+
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="username" class="form-label fw-semibold">Username</label>
+                        <input type="text" class="form-control" id="username" name="username" placeholder="Enter agent username" required>
+                    </div>
+                    <div class="mb-4">
+                        <label for="password" class="form-label fw-semibold">Password</label>
+                        <input type="password" class="form-control" id="password" name="password" placeholder="Enter password" required>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-dark btn-lg py-3 fw-bold">Login to Dashboard</button>
+                    </div>
+                </form>
+                <div class="text-center mt-4 text-muted small">
+                    Default credentials: <code>admin</code> / <code>luxe2026</code>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

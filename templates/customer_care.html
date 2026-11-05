@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Customer Care & Support - LuxeEstate Portal{% endblock %}
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="text-center mb-5">
+                <h1 class="fw-bold text-dark">Customer Care & Support</h1>
+                <p class="text-muted">Have questions about our properties, pricing, or how to purchase? Send us a message below and our customer care team will respond promptly.</p>
+            </div>
+            
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <div class="card shadow-lg border-0 rounded-4 p-4 p-md-5 bg-white">
+                <form method="POST">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="name" class="form-label fw-semibold">Your Full Name</label>
+                            <input type="text" class="form-control" id="name" name="name" placeholder="John Doe" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="email" class="form-label fw-semibold">Email Address</label>
+                            <input type="email" class="form-control" id="email" name="email" placeholder="john@example.com" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="phone" class="form-label fw-semibold">Phone Number</label>
+                            <input type="tel" class="form-control" id="phone" name="phone" placeholder="+1 (555) 000-0000">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="property_title" class="form-label fw-semibold">Property of Interest (Optional)</label>
+                            <input type="text" class="form-control" id="property_title" name="property_title" placeholder="e.g. Modern Glass Villa or General Inquiry">
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label for="message" class="form-label fw-semibold">Your Message / Inquiry</label>
+                        <textarea class="form-control" id="message" name="message" rows="5" placeholder="Ask us anything about purchasing procedures, inspections, or financing options..." required></textarea>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-dark btn-lg py-3 fw-bold shadow-sm">Send Inquiry to Customer Care</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
