@@ -1,10 +1,8 @@
 import sqlite3
-import os
 
 def init_db():
     conn = sqlite3.connect('real_estate.db')
     cursor = conn.cursor()
-    # Messages table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -20,7 +18,7 @@ def init_db():
     ''')
     conn.commit()
     conn.close()
+    print("Database table messages created successfully.")
 
 if __name__ == '__main__':
     init_db()
-    print("Database initialized with messages table.")
