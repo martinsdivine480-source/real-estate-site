@@ -1,0 +1,61 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f4f6f9;
+    color: #333;
+    margin: 0;
+    padding: 0;
+}
+
+.navbar {
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.hero-section {
+    background: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.5)), url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1920&q=80') no-repeat center center;
+    background-size: cover;
+    color: white;
+    padding: 160px 0;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.8);
+    border-bottom: 5px solid #ffc107;
+}
+
+.property-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: none;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.property-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+}
+
+.property-card img {
+    height: 230px;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+
+.property-card:hover img {
+    transform: scale(1.05);
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+.price-tag {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #2b7a78;
+}
+
+footer {
+    background-color: #1a1a1a;
+    color: #aaa;
+    padding: 40px 0;
+    margin-top: 60px;
+}

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Purchase Request Sent - LuxeEstate Portal{% endblock %}
+{% block content %}
+<div class="container my-5 text-center" style="min-height: 60vh;">
+    <div class="card shadow-lg p-5 mx-auto rounded-4 border-0" style="max-width: 700px; background: #fff;">
+        <div class="mb-4">
+            <i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i>
+        </div>
+        <h1 class="fw-bold text-dark mb-3">Inquiry Sent Successfully!</h1>
+        <p class="lead text-muted mb-4">
+            Thank you, <strong>{{ name }}</strong>. Your purchase request and contact details for <strong>{{ property.title }}</strong> have been forwarded directly to the agent at <a href="mailto:marinsdivine480@gmail.com" class="text-decoration-none fw-bold text-dark">marinsdivine480@gmail.com</a>.
+        </p>
+        <div class="alert alert-light border p-3 mb-4 text-start">
+            <h6 class="fw-bold text-secondary mb-2">Request Details:</h6>
+            <ul class="list-unstyled mb-0 small text-muted">
+                <li><strong>Property:</strong> {{ property.title }} ({{ property.location }})</li>
+                <li><strong>Price:</strong> {{ property.price }}</li>
+                <li><strong>Client Email:</strong> {{ email }}</li>
+            </ul>
+        </div>
+        <a href="{{ url_for('home') }}" class="btn btn-dark btn-lg px-5 py-2 fw-semibold shadow">Back to Home</a>
+    </div>
+</div>
+{% endblock %}

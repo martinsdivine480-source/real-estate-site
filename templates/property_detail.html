@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}{{ property.title }} - LuxeEstate Portal{% endblock %}
+{% block content %}
+<div class="container my-5">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('home') }}" class="text-decoration-none text-dark">Home</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('listings') }}" class="text-decoration-none text-dark">Listings</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ property.title }}</li>
+        </ol>
+    </nav>
+
+    <div class="row g-5">
+        <!-- Property Image & Description -->
+        <div class="col-lg-7">
+            <div class="card shadow-sm border-0 rounded-4 overflow-hidden mb-4">
+                <img src="{{ property.image_url }}" class="img-fluid w-100" style="max-height: 450px; object-fit: cover;" alt="{{ property.title }}">
+            </div>
+            <div class="card shadow-sm border-0 rounded-4 p-4 bg-white">
+                <h3 class="fw-bold mb-3">About This Property</h3>
+                <p class="text-muted lead fs-6 lh-lg">{{ property.description }}</p>
+                <div class="d-flex align-items-center mt-4 pt-3 border-top">
+                    <div class="me-4">
+                        <span class="text-muted d-block small">Location</span>
+                        <strong class="text-dark"><i class="bi bi-geo-alt-fill text-danger"></i> {{ property.location }}</strong>
+                    </div>
+                    <div>
+                        <span class="text-muted d-block small">Listing ID</span>
+                        <strong class="text-dark">#LUXE-0{{ property.id }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Purchase & Contact Agent Card -->
+        <div class="col-lg-5">
+            <div class="card shadow-lg border-0 rounded-4 p-4 bg-white sticky-top" style="top: 100px;">
+                <h3 class="fw-bold text-dark mb-1">{{ property.title }}</h3>
+                <p class="price-tag mb-4 fs-2">{{ property.price }}</p>
+                
+                <hr class="mb-4">
+
+                <h5 class="fw-bold mb-3 text-secondary"><i class="bi bi-envelope-at-fill text-warning me-2"></i>Contact Agent to Buy</h5>
+                <p class="small text-muted mb-4">Click below to open your email client and send an instant message directly to <strong class="text-dark">marinsdivine480@gmail.com</strong> regarding this property.</p>
+
+                <a href="mailto:marinsdivine480@gmail.com?subject=Inquiry about {{ property.title }} (#LUXE-0{{ property.id }})&body=Hello,%0D%0A%0D%0AI am interested in purchasing {{ property.title }} ({{ property.price }} - {{ property.location }}). Please contact me with more details.%0D%0A%0D%0AName:%0D%0APhone:" class="btn btn-warning btn-lg w-100 fw-bold shadow-sm py-3 text-dark mb-3 text-decoration-none">
+                    <i class="bi bi-envelope-fill me-2"></i> Email Agent Directly
+                </a>
+
+                <hr class="my-4">
+
+                <h6 class="fw-bold mb-3 text-secondary">Or Submit Inquiry Form</h6>
+                <form action="{{ url_for('buy_property', prop_id=property.id) }}" method="POST">
+                    <div class="mb-3">
+                        <label for="name" class="form-label fw-semibold small">Full Name</label>
+                        <input type="text" class="form-control" id="name" name="name" required placeholder="Enter your full name">
+                    </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label fw-semibold small">Email Address</label>
+                        <input type="email" class="form-control" id="email" name="email" required placeholder="name@example.com">
+                    </div>
+                    <div class="mb-3">
+                        <label for="phone" class="form-label fw-semibold small">Phone Number</label>
+                        <input type="tel" class="form-control" id="phone" name="phone" required placeholder="+1 (555) 000-0000">
+                    </div>
+                    <div class="mb-4">
+                        <label for="message" class="form-label fw-semibold small">Message / Special Request</label>
+                        <textarea class="form-control" id="message" name="message" rows="3" placeholder="I am interested in purchasing this property..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-dark btn-lg w-100 fw-bold shadow-sm py-3">Submit Purchase Inquiry</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
