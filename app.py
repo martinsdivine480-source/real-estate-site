@@ -10,7 +10,6 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
-# 10 Detailed properties using reliable Unsplash Source photo IDs directly
 PROPERTIES = [
     {
         "id": 1,
@@ -125,58 +124,110 @@ def buy_property(prop_id):
     client_name = request.form.get('name')
     client_email = request.form.get('email')
     client_phone = request.form.get('phone')
-    message = request.form.get('message', '')
+    message_text = request.form.get('message', '')
 
     conn = get_db_connection()
-    conn.execute(
-        'INSERT INTO messages (name, email, phone, property_title, message) VALUES (?, ?, ?, ?, ?)',
-        (client_name, client_email, client_phone, prop['title'], message)
+    # Check if client has an open conversation for this property
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT id FROM conversations WHERE client_email = ? AND property_title = ? AND status = 'Open'",
+        (client_email, prop['title'])
+    )
+    conv = cursor.fetchone()
+
+    if conv:
+        conv_id = conv['id']
+    else:
+        cursor.execute(
+            "INSERT INTO conversations (client_name, client_email, client_phone, property_title, status) VALUES (?, ?, ?, ?, 'Open')",
+            (client_name, client_email, client_phone, prop['title'])
+        )
+        conv_id = cursor.lastrowid
+
+    cursor.execute(
+        "INSERT INTO conversation_messages (conversation_id, sender, message) VALUES (?, 'client', ?)",
+        (conv_id, message_text)
     )
     conn.commit()
     conn.close()
 
-    flash(f"Purchase inquiry sent successfully for {prop['title']}! Our customer care team will contact you shortly.", "success")
-    return render_template('success.html', property=prop, name=client_name)
-
-@app.route('/contact', methods=['GET', 'POST'])
-def contact():
-    if request.method == 'POST':
-        name = request.form.get('name')
-        email = request.form.get('email')
-        message = request.form.get('message')
-
-        conn = get_db_connection()
-        conn.execute(
-            'INSERT INTO messages (name, email, property_title, message) VALUES (?, ?, ?, ?)',
-            (name, email, 'General Contact', message)
-        )
-        conn.commit()
-        conn.close()
-
-        flash("Your message has been sent successfully to customer care!", "success")
-        return redirect(url_for('home'))
-    return render_template('contact.html')
+    session['client_email'] = client_email
+    flash(f"Inquiry sent for {prop['title']}! You can track your conversation below.", "success")
+    return redirect(url_for('customer_care', conv_id=conv_id))
 
 @app.route('/customer-care', methods=['GET', 'POST'])
 def customer_care():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
     if request.method == 'POST':
-        name = request.form.get('name')
-        email = request.form.get('email')
-        phone = request.form.get('phone')
-        property_title = request.form.get('property_title') or 'General Support'
-        message = request.form.get('message')
+        action = request.form.get('action')
+        
+        if action == 'new_conv':
+            name = request.form.get('name')
+            email = request.form.get('email')
+            phone = request.form.get('phone')
+            property_title = request.form.get('property_title') or 'General Support'
+            message_text = request.form.get('message')
 
-        conn = get_db_connection()
-        conn.execute(
-            'INSERT INTO messages (name, email, phone, property_title, message) VALUES (?, ?, ?, ?, ?)',
-            (name, email, phone, property_title, message)
-        )
-        conn.commit()
-        conn.close()
+            cursor.execute(
+                "INSERT INTO conversations (client_name, client_email, client_phone, property_title, status) VALUES (?, ?, ?, ?, 'Open')",
+                (name, email, phone, property_title)
+            )
+            conv_id = cursor.lastrowid
+            cursor.execute(
+                "INSERT INTO conversation_messages (conversation_id, sender, message) VALUES (?, 'client', ?)",
+                (conv_id, message_text)
+            )
+            conn.commit()
+            session['client_email'] = email
+            conn.close()
+            flash("New conversation started successfully!", "success")
+            return redirect(url_for('customer_care', conv_id=conv_id))
 
-        flash("Your message has been submitted to Customer Care successfully! We will respond soon.", "success")
-        return redirect(url_for('customer_care'))
-    return render_template('customer_care.html')
+        elif action == 'reply_conv':
+            conv_id = request.form.get('conv_id')
+            message_text = request.form.get('message')
+            
+            # Verify conversation is still open
+            cursor.execute("SELECT status FROM conversations WHERE id = ?", (conv_id,))
+            conv = cursor.fetchone()
+            if conv and conv['status'] == 'Open':
+                cursor.execute(
+                    "INSERT INTO conversation_messages (conversation_id, sender, message) VALUES (?, 'client', ?)",
+                    (conv_id, message_text)
+                )
+                conn.commit()
+                flash("Reply sent successfully!", "success")
+            else:
+                flash("This conversation has been closed by customer care. Please start a new conversation.", "warning")
+            conn.close()
+            return redirect(url_for('customer_care', conv_id=conv_id))
+
+    conv_id = request.args.get('conv_id', type=int)
+    active_conv = None
+    messages = []
+    client_email = session.get('client_email')
+    my_conversations = []
+
+    if client_email:
+        cursor.execute("SELECT * FROM conversations WHERE client_email = ? ORDER BY created_at DESC", (client_email,))
+        my_conversations = cursor.fetchall()
+
+    if conv_id:
+        cursor.execute("SELECT * FROM conversations WHERE id = ?", (conv_id,))
+        active_conv = cursor.fetchone()
+        if active_conv:
+            cursor.execute("SELECT * FROM conversation_messages WHERE conversation_id = ? ORDER BY created_at ASC", (conv_id,))
+            messages = cursor.fetchall()
+            session['client_email'] = active_conv['client_email']
+
+    conn.close()
+    return render_template('customer_care.html', 
+                           active_conv=active_conv, 
+                           messages=messages, 
+                           my_conversations=my_conversations,
+                           properties=PROPERTIES)
 
 @app.route('/agent/login', methods=['GET', 'POST'])
 def agent_login():
@@ -197,26 +248,40 @@ def agent_dashboard():
         return redirect(url_for('agent_login'))
     
     conn = get_db_connection()
-    inquiries = conn.execute('SELECT * FROM messages ORDER BY created_at DESC').fetchall()
+    conversations = conn.execute('SELECT * FROM conversations ORDER BY created_at DESC').fetchall()
     conn.close()
-    return render_template('agent_dashboard.html', inquiries=inquiries)
+    return render_template('agent_dashboard.html', conversations=conversations)
 
-@app.route('/agent/reply/<int:msg_id>', methods=['POST'])
-def agent_reply(msg_id):
+@app.route('/agent/conversation/<int:conv_id>', methods=['GET', 'POST'])
+def agent_conversation(conv_id):
     if not session.get('agent_logged_in'):
         return redirect(url_for('agent_login'))
     
-    reply_text = request.form.get('reply')
     conn = get_db_connection()
-    conn.execute(
-        'UPDATE messages SET reply = ?, status = ? WHERE id = ?',
-        (reply_text, 'Replied', msg_id)
-    )
-    conn.commit()
+    cursor = conn.cursor()
+
+    if request.method == 'POST':
+        action = request.form.get('action')
+        if action == 'reply':
+            reply_text = request.form.get('message')
+            cursor.execute(
+                "INSERT INTO conversation_messages (conversation_id, sender, message) VALUES (?, 'agent', ?)",
+                (conv_id, reply_text)
+            )
+            conn.commit()
+            flash("Reply sent to client!", "success")
+        elif action == 'close':
+            cursor.execute("UPDATE conversations SET status = 'Closed' WHERE id = ?", (conv_id,))
+            conn.commit()
+            flash("Conversation closed successfully.", "success")
+
+    cursor.execute("SELECT * FROM conversations WHERE id = ?", (conv_id,))
+    conv = cursor.fetchone()
+    cursor.execute("SELECT * FROM conversation_messages WHERE conversation_id = ? ORDER BY created_at ASC", (conv_id,))
+    messages = cursor.fetchall()
     conn.close()
 
-    flash("Response saved successfully!", "success")
-    return redirect(url_for('agent_dashboard'))
+    return render_template('agent_conversation.html', conv=conv, messages=messages)
 
 @app.route('/agent/logout')
 def agent_logout():

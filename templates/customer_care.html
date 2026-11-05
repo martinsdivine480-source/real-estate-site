@@ -2,55 +2,141 @@
 {% block title %}Customer Care & Support - LuxeEstate Portal{% endblock %}
 {% block content %}
 <div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="text-center mb-5">
-                <h1 class="fw-bold text-dark">Customer Care & Support</h1>
-                <p class="text-muted">Have questions about our properties, pricing, or how to purchase? Send us a message below and our customer care team will respond promptly.</p>
+    <div class="row">
+        <!-- Sidebar: My Conversations or New Conversation Trigger -->
+        <div class="col-lg-4 mb-4">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-body">
+                    <h5 class="card-title fw-bold text-primary mb-3"><i class="fas fa-headset me-2"></i>Customer Support</h5>
+                    <p class="text-muted small">Have questions about properties or purchasing? Chat with our customer care agents in real-time.</p>
+                    <button class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#newConvModal">
+                        <i class="fas fa-plus me-2"></i>Start New Conversation
+                    </button>
+                </div>
             </div>
-            
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                        <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show" role="alert">
-                            {{ message }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        </div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
 
-            <div class="card shadow-lg border-0 rounded-4 p-4 p-md-5 bg-white">
-                <form method="POST">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="name" class="form-label fw-semibold">Your Full Name</label>
-                            <input type="text" class="form-control" id="name" name="name" placeholder="John Doe" required>
+            {% if my_conversations %}
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white fw-bold py-3">Your Conversations</div>
+                <div class="list-group list-group-flush">
+                    {% for c in my_conversations %}
+                    <a href="{{ url_for('customer_care', conv_id=c['id']) }}" class="list-group-item list-group-item-action {% if active_conv and active_conv['id'] == c['id'] %}active{% endif %}">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1 text-truncate">{{ c['property_title'] }}</h6>
+                            <small class="badge {% if c['status'] == 'Open' %}bg-success{% else %}bg-secondary{% endif %}">{{ c['status'] }}</small>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="email" class="form-label fw-semibold">Email Address</label>
-                            <input type="email" class="form-control" id="email" name="email" placeholder="john@example.com" required>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="phone" class="form-label fw-semibold">Phone Number</label>
-                            <input type="tel" class="form-control" id="phone" name="phone" placeholder="+1 (555) 000-0000">
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="property_title" class="form-label fw-semibold">Property of Interest (Optional)</label>
-                            <input type="text" class="form-control" id="property_title" name="property_title" placeholder="e.g. Modern Glass Villa or General Inquiry">
-                        </div>
-                    </div>
-                    <div class="mb-4">
-                        <label for="message" class="form-label fw-semibold">Your Message / Inquiry</label>
-                        <textarea class="form-control" id="message" name="message" rows="5" placeholder="Ask us anything about purchasing procedures, inspections, or financing options..." required></textarea>
-                    </div>
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-dark btn-lg py-3 fw-bold shadow-sm">Send Inquiry to Customer Care</button>
-                    </div>
-                </form>
+                        <small class="text-muted">Started: {{ c['created_at'][:16] }}</small>
+                    </a>
+                    {% endfor %}
+                </div>
             </div>
+            {% endif %}
+        </div>
+
+        <!-- Main Chat Window -->
+        <div class="col-lg-8">
+            {% if active_conv %}
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-3">
+                    <div>
+                        <h5 class="mb-0">{{ active_conv['property_title'] }}</h5>
+                        <small>Ticket #{{ active_conv['id'] }} | Status: <span class="badge {% if active_conv['status'] == 'Open' %}bg-success{% else %}bg-secondary{% endif %}">{{ active_conv['status'] }}</span></small>
+                    </div>
+                    {% if active_conv['status'] == 'Closed' %}
+                    <span class="badge bg-warning text-dark">Conversation Ended by Agent</span>
+                    {% endif %}
+                </div>
+                
+                <div class="card-body chat-box p-4" style="height: 450px; overflow-y: scroll; background-color: #f8f9fa;">
+                    {% for m in messages %}
+                    <div class="d-flex mb-3 {% if m['sender'] == 'client' %}justify-content-end{% else %}justify-content-start{% endif %}">
+                        <div class="p-3 rounded shadow-sm {% if m['sender'] == 'client' %}bg-primary text-white{% else %}bg-white text-dark border{% endif %}" style="max-width: 75%;">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <small class="fw-bold me-3">{% if m['sender'] == 'client' %}You{% else %}Customer Care Agent{% endif %}</small>
+                                <small class="text-muted" style="font-size: 0.75rem;">{{ m['created_at'][11:16] }}</small>
+                            </div>
+                            <p class="mb-0" style="white-space: pre-wrap;">{{ m['message'] }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="card-footer bg-white p-3">
+                    {% if active_conv['status'] == 'Open' %}
+                    <form action="{{ url_for('customer_care') }}" method="POST">
+                        <input type="hidden" name="action" value="reply_conv">
+                        <input type="hidden" name="conv_id" value="{{ active_conv['id'] }}">
+                        <div class="input-group">
+                            <input type="text" name="message" class="form-control" placeholder="Type your message here..." required autocomplete="off">
+                            <button class="btn btn-primary" type="submit"><i class="fas fa-paper-plane me-1"></i> Send</button>
+                        </div>
+                    </form>
+                    {% else %}
+                    <div class="alert alert-secondary mb-0 text-center">
+                        This conversation has been closed by customer care. 
+                        <button class="btn btn-sm btn-primary ms-2" data-bs-toggle="modal" data-bs-target="#newConvModal">Start New Conversation</button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% else %}
+            <div class="card shadow-sm border-0 text-center py-5">
+                <div class="card-body py-5">
+                    <i class="fas fa-comments fa-4x text-muted mb-3"></i>
+                    <h4>Welcome to Customer Care Support</h4>
+                    <p class="text-muted">Select an existing conversation from the sidebar or click below to start a new inquiry.</p>
+                    <button class="btn btn-primary btn-lg mt-2" data-bs-toggle="modal" data-bs-target="#newConvModal">
+                        <i class="fas fa-plus me-2"></i>Start New Conversation
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- New Conversation Modal -->
+<div class="modal fade" id="newConvModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="{{ url_for('customer_care') }}" method="POST">
+                <input type="hidden" name="action" value="new_conv">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-headset me-2 text-primary"></i>Start Customer Care Conversation</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Full Name</label>
+                        <input type="text" name="name" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email Address (Used to track your chats)</label>
+                        <input type="email" name="email" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Phone Number</label>
+                        <input type="text" name="phone" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Property of Interest (Optional)</label>
+                        <select name="property_title" class="form-select">
+                            <option value="General Support">General Support / Inquiry</option>
+                            {% for p in properties %}
+                            <option value="{{ p['title'] }}">{{ p['title'] }} ({{ p['location'] }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Your Message</label>
+                        <textarea name="message" class="form-control" rows="4" placeholder="How can we assist you with purchasing?" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Start Chat</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
