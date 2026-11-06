@@ -471,13 +471,20 @@ def agent_conversation(conv_id):
             flash("Conversation closed successfully.", "success")
         elif action == 'confirm_payment':
             cursor.execute("UPDATE conversations SET payment_status = 'Verified' WHERE id = ?", (conv_id,))
-            # Also post confirmation message
             cursor.execute(
                 "INSERT INTO conversation_messages (conversation_id, sender, message, is_image) VALUES (?, 'agent', 'Payment received and verified successfully! Verified ✓', 0)",
                 (conv_id,)
             )
             conn.commit()
             flash("Payment successfully verified and confirmed!", "success")
+        elif action == 'decline_payment':
+            cursor.execute("UPDATE conversations SET payment_status = 'Declined' WHERE id = ?", (conv_id,))
+            cursor.execute(
+                "INSERT INTO conversation_messages (conversation_id, sender, message, is_image) VALUES (?, 'agent', 'Payment could not be verified or was not received. Please check and re-upload correct payment proof. ✗', 0)",
+                (conv_id,)
+            )
+            conn.commit()
+            flash("Payment marked as declined.", "warning")
 
     cursor.execute("SELECT * FROM conversations WHERE id = ?", (conv_id,))
     conv = cursor.fetchone()
