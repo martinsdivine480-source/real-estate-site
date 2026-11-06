@@ -29,7 +29,14 @@
                         <small class="fw-bold me-3">{% if m['sender'] == 'agent' %}You (Agent){% else %}{{ conv['client_name'] }} (Client){% endif %}</small>
                         <small class="text-muted" style="font-size: 0.75rem;">{{ m['created_at'][11:16] }}</small>
                     </div>
+                    {% if m['is_image'] %}
+                    <div class="mb-2">
+                        <img src="{{ url_for('static', filename='uploads/' + m['message']) }}" class="img-fluid rounded border" alt="Payment Screenshot" style="max-height: 250px;">
+                    </div>
+                    <small class="d-block fst-italic">Payment Screenshot</small>
+                    {% else %}
                     <p class="mb-0" style="white-space: pre-wrap;">{{ m['message'] }}</p>
+                    {% endif %}
                 </div>
             </div>
             {% endfor %}

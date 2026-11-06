@@ -3,11 +3,17 @@ from flask_wtf.csrf import CSRFProtect
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 import os
 import sqlite3
 
 app = Flask(__name__)
 app.secret_key = 'luxe_estate_secure_super_secret_key_2026'
+
+# Ensure upload folder exists
+UPLOAD_FOLDER = os.path.join('real_estate_site', 'static', 'uploads')
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # Initialize CSRF Protection
 csrf = CSRFProtect(app)
@@ -46,16 +52,23 @@ def init_db_tables():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+    # Check if is_image column exists in conversation_messages, if not add it
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS conversation_messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             conversation_id INTEGER NOT NULL,
             sender TEXT NOT NULL,
             message TEXT NOT NULL,
+            is_image INTEGER DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (conversation_id) REFERENCES conversations (id)
         )
     ''')
+    try:
+        cursor.execute("ALTER TABLE conversation_messages ADD COLUMN is_image INTEGER DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass
+
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS crypto_payments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -212,7 +225,7 @@ def buy_property(prop_id):
         conv_id = cursor.lastrowid
 
     cursor.execute(
-        "INSERT INTO conversation_messages (conversation_id, sender, message) VALUES (?, 'client', ?)",
+        "INSERT INTO conversation_messages (conversation_id, sender, message, is_image) VALUES (?, 'client', ?, 0)",
         (conv_id, message_text)
     )
     conn.commit()
@@ -273,16 +286,16 @@ def crypto_deposit(payment_id):
                 conv_id = cursor.lastrowid
 
             # Add automated notification message to chat
-            notif_msg = f"[Crypto Payment Submitted] TXN #{payment['id']} | Asset: {payment['crypto_type']} | Amount: ${payment['amount_usd']}. Please review my payment and screenshot."
+            notif_msg = f"[Crypto Payment Submitted] TXN #{payment['id']} | Asset: {payment['crypto_type']} | Amount: ${payment['amount_usd']}. Please upload your payment screenshot below."
             cursor.execute(
-                "INSERT INTO conversation_messages (conversation_id, sender, message) VALUES (?, 'client', ?)",
+                "INSERT INTO conversation_messages (conversation_id, sender, message, is_image) VALUES (?, 'client', ?, 0)",
                 (conv_id, notif_msg)
             )
             cursor.execute("UPDATE crypto_payments SET status = 'Submitted / Awaiting Confirmation' WHERE id = ?", (payment_id,))
             conn.commit()
             session['client_email'] = payment['payer_name']
             conn.close()
-            flash("Payment submitted! Please upload your transaction screenshot or details in the chat below for agent verification.", "success")
+            flash("Payment notification sent! You can now upload your transaction screenshot in the chat below.", "success")
             return redirect(url_for('customer_care', conv_id=conv_id))
 
         conn.close()
@@ -328,7 +341,7 @@ def customer_care():
             )
             conv_id = cursor.lastrowid
             cursor.execute(
-                "INSERT INTO conversation_messages (conversation_id, sender, message) VALUES (?, 'client', ?)",
+                "INSERT INTO conversation_messages (conversation_id, sender, message, is_image) VALUES (?, 'client', ?, 0)",
                 (conv_id, message_text)
             )
             conn.commit()
@@ -339,17 +352,33 @@ def customer_care():
 
         elif action == 'reply_conv':
             conv_id = request.form.get('conv_id')
-            message_text = request.form.get('message')
+            message_text = request.form.get('message', '').strip()
             
             cursor.execute("SELECT status FROM conversations WHERE id = ?", (conv_id,))
             conv = cursor.fetchone()
             if conv and conv['status'] == 'Open':
-                cursor.execute(
-                    "INSERT INTO conversation_messages (conversation_id, sender, message) VALUES (?, 'client', ?)",
-                    (conv_id, message_text)
-                )
+                # Check for screenshot upload
+                file = request.files.get('screenshot')
+                if file and file.filename != '':
+                    filename = secure_filename(file.filename)
+                    ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+                    if ext in ['png', 'jpg', 'jpeg', 'gif', 'webp']:
+                        new_filename = f"proof_{conv_id}_{int(os.urandom(4).hex(), 16)}.{ext}"
+                        file.save(os.path.join(app.config['UPLOAD_FOLDER'], new_filename))
+                        
+                        cursor.execute(
+                            "INSERT INTO conversation_messages (conversation_id, sender, message, is_image) VALUES (?, 'client', ?, 1)",
+                            (conv_id, new_filename)
+                        )
+                
+                if message_text:
+                    cursor.execute(
+                        "INSERT INTO conversation_messages (conversation_id, sender, message, is_image) VALUES (?, 'client', ?, 0)",
+                        (conv_id, message_text)
+                    )
+
                 conn.commit()
-                flash("Reply sent successfully!", "success")
+                flash("Message/screenshot sent successfully!", "success")
             else:
                 flash("This conversation has been closed by customer care. Please start a new conversation.", "warning")
             conn.close()
@@ -425,7 +454,7 @@ def agent_conversation(conv_id):
         if action == 'reply':
             reply_text = request.form.get('message')
             cursor.execute(
-                "INSERT INTO conversation_messages (conversation_id, sender, message) VALUES (?, 'agent', ?)",
+                "INSERT INTO conversation_messages (conversation_id, sender, message, is_image) VALUES (?, 'agent', ?, 0)",
                 (conv_id, reply_text)
             )
             conn.commit()
