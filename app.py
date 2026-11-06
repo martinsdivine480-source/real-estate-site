@@ -25,7 +25,7 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
-def init_admin_user():
+def init_db_tables():
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute('''
@@ -35,15 +35,47 @@ def init_admin_user():
             password_hash TEXT NOT NULL
         )
     ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS conversations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_name TEXT NOT NULL,
+            client_email TEXT NOT NULL,
+            client_phone TEXT,
+            property_title TEXT NOT NULL,
+            status TEXT DEFAULT 'Open',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS conversation_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            conversation_id INTEGER NOT NULL,
+            sender TEXT NOT NULL,
+            message TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (conversation_id) REFERENCES conversations (id)
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS crypto_payments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            property_title TEXT NOT NULL,
+            crypto_type TEXT NOT NULL,
+            amount_usd REAL NOT NULL,
+            payer_name TEXT NOT NULL,
+            status TEXT DEFAULT 'Pending Verification',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
     # Check if Elder exists, if not create with hashed password
     cursor.execute("SELECT * FROM admin_users WHERE username = 'Elder'")
     if not cursor.fetchone():
         hashed_pw = generate_password_hash('Eyereforma')
         cursor.execute("INSERT INTO admin_users (username, password_hash) VALUES (?, ?)", ('Elder', hashed_pw))
-        conn.commit()
+    conn.commit()
     conn.close()
 
-init_admin_user()
+init_db_tables()
 
 PROPERTIES = [
     {
@@ -190,6 +222,59 @@ def buy_property(prop_id):
     flash(f"Inquiry sent for {prop['title']}! You can track your conversation below.", "success")
     return redirect(url_for('customer_care', conv_id=conv_id))
 
+@app.route('/crypto-pay', methods=['GET', 'POST'])
+@limiter.limit("15 per minute", methods=['POST'])
+def crypto_pay():
+    if request.method == 'POST':
+        property_title = request.form.get('property_title')
+        crypto_type = request.form.get('crypto_type')
+        amount_usd = request.form.get('amount_usd')
+        payer_name = request.form.get('payer_name')
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO crypto_payments (property_title, crypto_type, amount_usd, payer_name, status) VALUES (?, ?, ?, ?, 'Pending Verification')",
+            (property_title, crypto_type, amount_usd, payer_name)
+        )
+        payment_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+
+        return redirect(url_for('crypto_deposit', payment_id=payment_id))
+
+    return render_template('crypto_pay.html', properties=PROPERTIES)
+
+@app.route('/crypto-deposit/<int:payment_id>', methods=['GET', 'POST'])
+def crypto_deposit(payment_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    if request.method == 'POST':
+        cursor.execute("UPDATE crypto_payments SET status = 'Submitted / Awaiting Confirmation' WHERE id = ?", (payment_id,))
+        conn.commit()
+        conn.close()
+        flash("Payment notification sent to customer care agent! We will verify the blockchain transaction shortly.", "success")
+        return redirect(url_for('crypto_pay'))
+
+    cursor.execute("SELECT * FROM crypto_payments WHERE id = ?", (payment_id,))
+    payment = cursor.fetchone()
+    conn.close()
+
+    if not payment:
+        return "Payment transaction not found", 404
+
+    # Wallet addresses simulation
+    wallets = {
+        "Bitcoin (BTC)": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+        "Ethereum (ETH)": "0x71C...B82A4F91c3d0124E5678901234567890abcdef",
+        "Tether (USDT TRC20/ERC20)": "TJw9...8Kx2mQ19vL7bN3xP4zR6sT8uV1wY2zA3bC",
+        "BNB (Binance Smart Chain)": "bnb1...3k92v8x7z4q6w5e2r1t0y9u8i7o6p5a4s3d2f1"
+    }
+    wallet_address = wallets.get(payment['crypto_type'], "0x71C...B82A4F91c3d0124E5678901234567890abcdef")
+
+    return render_template('crypto_deposit.html', payment=payment, wallet_address=wallet_address)
+
 @app.route('/customer-care', methods=['GET', 'POST'])
 @limiter.limit("20 per minute", methods=['POST'])
 def customer_care():
@@ -292,8 +377,9 @@ def agent_dashboard():
     
     conn = get_db_connection()
     conversations = conn.execute('SELECT * FROM conversations ORDER BY created_at DESC').fetchall()
+    crypto_payments = conn.execute('SELECT * FROM crypto_payments ORDER BY created_at DESC').fetchall()
     conn.close()
-    return render_template('agent_dashboard.html', conversations=conversations)
+    return render_template('agent_dashboard.html', conversations=conversations, crypto_payments=crypto_payments)
 
 @app.route('/agent/conversation/<int:conv_id>', methods=['GET', 'POST'])
 def agent_conversation(conv_id):

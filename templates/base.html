@@ -31,6 +31,9 @@
                         <a class="nav-link {% if request.endpoint == 'listings' %}active fw-bold text-warning{% endif %}" href="{{ url_for('listings') }}">All Properties</a>
                     </li>
                     <li class="nav-item mx-2">
+                        <a class="nav-link {% if request.endpoint == 'crypto_pay' %}active fw-bold text-warning{% endif %}" href="{{ url_for('crypto_pay') }}"><i class="fas fa-coins text-warning me-1"></i> Pay with Crypto</a>
+                    </li>
+                    <li class="nav-item mx-2">
                         {% if session.get('agent_logged_in') %}
                             <a class="nav-link text-warning fw-bold {% if request.endpoint == 'agent_dashboard' %}active{% endif %}" href="{{ url_for('agent_dashboard') }}"><i class="fas fa-gauge-high me-1"></i> Agent Dashboard</a>
                         {% else %}
@@ -66,6 +69,7 @@
         <div class="container">
             <p class="mb-2 fw-bold text-white fs-5"><i class="fas fa-house-heart text-warning me-2"></i>LuxeEstate Portal</p>
             <p class="mb-2">
+                <a href="{{ url_for('crypto_pay') }}" class="text-warning text-decoration-none fw-semibold me-3">Pay with Crypto</a>
                 <a href="{{ url_for('customer_care') }}" class="text-warning text-decoration-none fw-semibold me-3">Customer Care</a>
                 {% if session.get('agent_logged_in') %}
                     <a href="{{ url_for('agent_dashboard') }}" class="text-warning text-decoration-none fw-semibold">Agent Dashboard</a>

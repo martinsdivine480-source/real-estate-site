@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Complete Payment - LuxeEstate Portal{% endblock %}
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-7">
+            <div class="card shadow-lg border-0 rounded-4 p-4 p-md-5 bg-white text-center">
+                <div class="mb-4">
+                    <div class="display-5 text-warning mb-2"><i class="fas fa-qrcode"></i></div>
+                    <h2 class="fw-bold text-dark">Send {{ payment['crypto_type'] }}</h2>
+                    <p class="text-muted">Please transfer the exact amount to the official wallet address below.</p>
+                </div>
+
+                <div class="alert alert-light border p-4 mb-4 text-start">
+                    <div class="row mb-2">
+                        <div class="col-sm-4 fw-semibold text-muted">Property / Purpose:</div>
+                        <div class="col-sm-8 text-dark fw-bold">{{ payment['property_title'] }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-sm-4 fw-semibold text-muted">Amount USD:</div>
+                        <div class="col-sm-8 text-success fw-bold">${{ payment['amount_usd'] }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-sm-4 fw-semibold text-muted">Payer:</div>
+                        <div class="col-sm-8 text-dark">{{ payment['payer_name'] }}</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm-4 fw-semibold text-muted">Transaction ID:</div>
+                        <div class="col-sm-8 text-secondary">#TXN-{{ payment['id'] }}</div>
+                    </div>
+                </div>
+
+                <div class="card bg-light border-0 p-4 mb-4">
+                    <h6 class="fw-bold text-secondary mb-2">Official Deposit Wallet Address</h6>
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control font-monospace bg-white text-center fw-bold" id="walletAddress" value="{{ wallet_address }}" readonly>
+                        <button class="btn btn-dark" type="button" onclick="navigator.clipboard.writeText(document.getElementById('walletAddress').value); alert('Wallet address copied to clipboard!');">
+                            <i class="fas fa-copy me-1"></i> Copy
+                        </button>
+                    </div>
+                    <small class="text-muted">Send only <strong>{{ payment['crypto_type'] }}</strong> to this address. Sending any other asset may result in permanent loss.</small>
+                </div>
+
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-success btn-lg py-3 fw-bold shadow-sm">
+                            <i class="fas fa-check-circle me-2">></i> I Have Sent the Payment (Notify Agent)
+                        </button>
+                        <a href="{{ url_for('customer_care') }}" class="btn btn-outline-secondary py-2">
+                            <i class="fas fa-headset me-1"></i> Open Customer Care Chat for Assistance
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

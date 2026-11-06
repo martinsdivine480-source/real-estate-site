@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Crypto Payment - LuxeEstate Portal{% endblock %}
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-7">
+            <div class="card shadow-lg border-0 rounded-4 p-4 p-md-5 bg-white">
+                <div class="text-center mb-4">
+                    <h2 class="fw-bold text-dark"><i class="fas fa-coins text-warning me-2"></i>Secure Crypto Payment</h2>
+                    <p class="text-muted small">Select your preferred cryptocurrency to complete your property acquisition.</p>
+                </div>
+
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    
+                    <div class="mb-4">
+                        <label for="property_title" class="form-label fw-semibold">Select Property / Purpose</label>
+                        <select name="property_title" id="property_title" class="form-select form-select-lg" required>
+                            <option value="" disabled selected>Choose property...</option>
+                            {% for p in properties %}
+                            <option value="{{ p['title'] }} ({{ p['price'] }})">{{ p['title'] }} - {{ p['price'] }} ({{ p['location'] }})</option>
+                            {% endfor %}
+                            <option value="Custom Property Deposit / Fee">Custom Property Deposit / Fee</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Select Cryptocurrency</label>
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <input type="radio" class="btn-check" name="crypto_type" id="btc" value="Bitcoin (BTC)" required autocomplete="off">
+                                <label class="btn btn-outline-dark w-100 py-3 fw-semibold text-start" for="btc">
+                                    <i class="fab fa-bitcoin text-warning fs-5 me-2"></i> Bitcoin (BTC)
+                                </label>
+                            </div>
+                            <div class="col-6">
+                                <input type="radio" class="btn-check" name="crypto_type" id="eth" value="Ethereum (ETH)" autocomplete="off">
+                                <label class="btn btn-outline-dark w-100 py-3 fw-semibold text-start" for="eth">
+                                    <i class="fab fa-ethereum text-primary fs-5 me-2"></i> Ethereum (ETH)
+                                </label>
+                            </div>
+                            <div class="col-6">
+                                <input type="radio" class="btn-check" name="crypto_type" id="usdt" value="Tether (USDT TRC20/ERC20)" autocomplete="off">
+                                <label class="btn btn-outline-dark w-100 py-3 fw-semibold text-start" for="usdt">
+                                    <i class="fas fa-dollar-sign text-success fs-5 me-2"></i> USDT (Tether)
+                                </label>
+                            </div>
+                            <div class="col-6">
+                                <input type="radio" class="btn-check" name="crypto_type" id="bnb" value="BNB (Binance Smart Chain)" autocomplete="off">
+                                <label class="btn btn-outline-dark w-100 py-3 fw-semibold text-start" for="bnb">
+                                    <i class="fas fa-cube text-warning fs-5 me-2"></i> BNB (Binance)
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="amount_usd" class="form-label fw-semibold">Amount (USD Equivalent)</label>
+                        <div class="input-group input-group-lg">
+                            <span class="input-group-text">$</span>
+                            <input type="number" step="0.01" class="form-control" id="amount_usd" name="amount_usd" placeholder="Enter amount in USD" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="payer_name" class="form-label fw-semibold">Your Full Name / Email</label>
+                        <input type="text" class="form-control" id="payer_name" name="payer_name" placeholder="Enter your name and email" required>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-warning btn-lg py-3 fw-bold text-dark shadow-sm">
+                            <i class="fas fa-lock me-2"></i> Proceed to Wallet Deposit Address
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
