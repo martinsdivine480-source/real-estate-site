@@ -49,10 +49,15 @@ def init_db_tables():
             client_phone TEXT,
             property_title TEXT NOT NULL,
             status TEXT DEFAULT 'Open',
+            payment_status TEXT DEFAULT 'Unpaid',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
-    # Check if is_image column exists in conversation_messages, if not add it
+    try:
+        cursor.execute("ALTER TABLE conversations ADD COLUMN payment_status TEXT DEFAULT 'Unpaid'")
+    except sqlite3.OperationalError:
+        pass
+
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS conversation_messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -219,7 +224,7 @@ def buy_property(prop_id):
         conv_id = conv['id']
     else:
         cursor.execute(
-            "INSERT INTO conversations (client_name, client_email, client_phone, property_title, status) VALUES (?, ?, ?, ?, 'Open')",
+            "INSERT INTO conversations (client_name, client_email, client_phone, property_title, status, payment_status) VALUES (?, ?, ?, ?, 'Open', 'Unpaid')",
             (client_name, client_email, client_phone, prop['title'])
         )
         conv_id = cursor.lastrowid
@@ -270,7 +275,7 @@ def crypto_deposit(payment_id):
         payment = cursor.fetchone()
         
         if payment:
-            # Create or find an open conversation for this client & property
+            # Create or find an open conversation for this client & property and set payment_status to Verifying
             cursor.execute(
                 "SELECT id FROM conversations WHERE client_email = ? AND property_title = ? AND status = 'Open'",
                 (payment['payer_name'], payment['property_title'])
@@ -278,24 +283,25 @@ def crypto_deposit(payment_id):
             conv = cursor.fetchone()
             if conv:
                 conv_id = conv['id']
+                cursor.execute("UPDATE conversations SET payment_status = 'Verifying' WHERE id = ?", (conv_id,))
             else:
                 cursor.execute(
-                    "INSERT INTO conversations (client_name, client_email, client_phone, property_title, status) VALUES (?, ?, '', ?, 'Open')",
+                    "INSERT INTO conversations (client_name, client_email, client_phone, property_title, status, payment_status) VALUES (?, ?, '', ?, 'Open', 'Verifying')",
                     (payment['payer_name'], payment['payer_name'], payment['property_title'])
                 )
                 conv_id = cursor.lastrowid
 
             # Add automated notification message to chat
-            notif_msg = f"[Crypto Payment Submitted] TXN #{payment['id']} | Asset: {payment['crypto_type']} | Amount: ${payment['amount_usd']}. Please upload your payment screenshot below."
+            notif_msg = f"[Crypto Payment Submitted] TXN #{payment['id']} | Asset: {payment['crypto_type']} | Amount: ${payment['amount_usd']}. Status: Verifying Payment..."
             cursor.execute(
                 "INSERT INTO conversation_messages (conversation_id, sender, message, is_image) VALUES (?, 'client', ?, 0)",
                 (conv_id, notif_msg)
             )
-            cursor.execute("UPDATE crypto_payments SET status = 'Submitted / Awaiting Confirmation' WHERE id = ?", (payment_id,))
+            cursor.execute("UPDATE crypto_payments SET status = 'Submitted / Verifying' WHERE id = ?", (payment_id,))
             conn.commit()
             session['client_email'] = payment['payer_name']
             conn.close()
-            flash("Payment notification sent! You can now upload your transaction screenshot in the chat below.", "success")
+            flash("Payment notification sent! Status: Verifying Payment. Please upload your transaction screenshot in the chat.", "success")
             return redirect(url_for('customer_care', conv_id=conv_id))
 
         conn.close()
@@ -336,7 +342,7 @@ def customer_care():
             message_text = request.form.get('message')
 
             cursor.execute(
-                "INSERT INTO conversations (client_name, client_email, client_phone, property_title, status) VALUES (?, ?, ?, ?, 'Open')",
+                "INSERT INTO conversations (client_name, client_email, client_phone, property_title, status, payment_status) VALUES (?, ?, ?, ?, 'Open', 'Unpaid')",
                 (name, email, phone, property_title)
             )
             conv_id = cursor.lastrowid
@@ -463,6 +469,15 @@ def agent_conversation(conv_id):
             cursor.execute("UPDATE conversations SET status = 'Closed' WHERE id = ?", (conv_id,))
             conn.commit()
             flash("Conversation closed successfully.", "success")
+        elif action == 'confirm_payment':
+            cursor.execute("UPDATE conversations SET payment_status = 'Verified' WHERE id = ?", (conv_id,))
+            # Also post confirmation message
+            cursor.execute(
+                "INSERT INTO conversation_messages (conversation_id, sender, message, is_image) VALUES (?, 'agent', 'Payment received and verified successfully! Verified ✓', 0)",
+                (conv_id,)
+            )
+            conn.commit()
+            flash("Payment successfully verified and confirmed!", "success")
 
     cursor.execute("SELECT * FROM conversations WHERE id = ?", (conv_id,))
     conv = cursor.fetchone()

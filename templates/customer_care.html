@@ -23,7 +23,9 @@
                     <a href="{{ url_for('customer_care', conv_id=c['id']) }}" class="list-group-item list-group-item-action {% if active_conv and active_conv['id'] == c['id'] %}active{% endif %}">
                         <div class="d-flex w-100 justify-content-between">
                             <h6 class="mb-1 text-truncate">{{ c['property_title'] }}</h6>
-                            <small class="badge {% if c['status'] == 'Open' %}bg-success{% else %}bg-secondary{% endif %}">{{ c['status'] }}</small>
+                            <small class="badge {% if c['payment_status'] == 'Verified' %}bg-success{% elif c['payment_status'] == 'Verifying' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                                {% if c['payment_status'] == 'Verified' %}Verified ✓{% elif c['payment_status'] == 'Verifying' %}Verifying Payment{% else %}{{ c['status'] }}{% endif %}
+                            </small>
                         </div>
                         <small class="text-muted">Started: {{ c['created_at'][:16] }}</small>
                     </a>
@@ -40,10 +42,17 @@
                 <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-3">
                     <div>
                         <h5 class="mb-0">{{ active_conv['property_title'] }}</h5>
-                        <small>Ticket #{{ active_conv['id'] }} | Status: <span class="badge {% if active_conv['status'] == 'Open' %}bg-success{% else %}bg-secondary{% endif %}">{{ active_conv['status'] }}</span></small>
+                        <small>Ticket #{{ active_conv['id'] }} | 
+                            Payment Status: 
+                            <span class="badge {% if active_conv['payment_status'] == 'Verified' %}bg-success{% elif active_conv['payment_status'] == 'Verifying' %}bg-warning text-dark{% else %}bg-light text-dark{% endif %} fs-6">
+                                {% if active_conv['payment_status'] == 'Verified' %}Verified ✓{% elif active_conv['payment_status'] == 'Verifying' %}Verifying Payment...{% else %}Unpaid{% endif %}
+                            </span>
+                        </small>
                     </div>
-                    {% if active_conv['status'] == 'Closed' %}
-                    <span class="badge bg-warning text-dark">Conversation Ended by Agent</span>
+                    {% if active_conv['payment_status'] == 'Verified' %}
+                    <span class="badge bg-success fs-6"><i class="fas fa-check-circle me-1"></i> Payment Verified</span>
+                    {% elif active_conv['payment_status'] == 'Verifying' %}
+                    <span class="badge bg-warning text-dark fs-6 animate-pulse"><i class="fas fa-spinner fa-spin me-1"></i> Verifying Payment...</span>
                     {% endif %}
                 </div>
                 
