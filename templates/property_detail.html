@@ -36,20 +36,30 @@
         <div class="col-lg-5">
             <div class="card shadow-lg border-0 rounded-4 p-4 bg-white sticky-top" style="top: 100px;">
                 <h3 class="fw-bold text-dark mb-1">{{ property.title }}</h3>
-                <p class="price-tag mb-4 fs-2">{{ property.price }}</p>
+                <p class="price-tag mb-4 fs-2 text-warning fw-bold">{{ property.price }}</p>
                 
                 <hr class="mb-4">
 
-                <h5 class="fw-bold mb-3 text-secondary"><i class="bi bi-envelope-at-fill text-warning me-2"></i>Contact Agent to Buy</h5>
+                <!-- Buy with Crypto Direct Button -->
+                <div class="mb-4">
+                    <a href="{{ url_for('crypto_pay') }}?property={{ property.title|urlencode }}&price={{ property.price|urlencode }}" class="btn btn-warning btn-lg w-100 fw-bold py-3 text-dark shadow-sm mb-2 text-decoration-none">
+                        <i class="fas fa-coins me-2"></i> Buy Property with Crypto
+                    </a>
+                    <small class="text-muted text-center d-block">Instant checkout via BTC, ETH, USDT, or BNB</small>
+                </div>
+
+                <hr class="mb-4">
+
+                <h5 class="fw-bold mb-3 text-secondary"><i class="fas fa-envelope-open-text text-primary me-2"></i>Contact Agent to Buy</h5>
                 <p class="small text-muted mb-4">Click below to open your email client and send an instant message directly to <strong class="text-dark">marinsdivine480@gmail.com</strong> regarding this property.</p>
 
-                <a href="mailto:marinsdivine480@gmail.com?subject=Inquiry about {{ property.title }} (#LUXE-0{{ property.id }})&body=Hello,%0D%0A%0D%0AI am interested in purchasing {{ property.title }} ({{ property.price }} - {{ property.location }}). Please contact me with more details.%0D%0A%0D%0AName:%0D%0APhone:" class="btn btn-warning btn-lg w-100 fw-bold shadow-sm py-3 text-dark mb-3 text-decoration-none">
-                    <i class="bi bi-envelope-fill me-2"></i> Email Agent Directly
+                <a href="mailto:marinsdivine480@gmail.com?subject=Inquiry about {{ property.title }} (#LUXE-0{{ property.id }})&body=Hello,%0D%0A%0D%0AI am interested in purchasing {{ property.title }} ({{ property.price }} - {{ property.location }}). Please contact me with more details.%0D%0A%0D%0AName:%0D%0APhone:" class="btn btn-outline-dark btn-lg w-100 fw-bold shadow-sm py-3 mb-3 text-decoration-none">
+                    <i class="fas fa-envelope me-2"></i> Email Agent Directly
                 </a>
 
                 <hr class="my-4">
 
-                <h6 class="fw-bold mb-3 text-secondary">Or Submit Inquiry Form</h6>
+                <h6 class="fw-bold mb-3 text-secondary">Or Submit Inquiry & Chat</h6>
                 <form action="{{ url_for('buy_property', prop_id=property.id) }}" method="POST">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="mb-3">
