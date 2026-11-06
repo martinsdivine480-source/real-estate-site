@@ -69,8 +69,6 @@
         <div class="container">
             <p class="mb-2 fw-bold text-white fs-5"><i class="fas fa-house-heart text-warning me-2"></i>LuxeEstate Portal</p>
             <p class="mb-2">
-                <a href="{{ url_for('crypto_pay') }}" class="text-warning text-decoration-none fw-semibold me-3">Pay with Crypto</a>
-                <a href="{{ url_for('customer_care') }}" class="text-warning text-decoration-none fw-semibold me-3">Customer Care</a>
                 {% if session.get('agent_logged_in') %}
                     <a href="{{ url_for('agent_dashboard') }}" class="text-warning text-decoration-none fw-semibold">Agent Dashboard</a>
                 {% else %}
