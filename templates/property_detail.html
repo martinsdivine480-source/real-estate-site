@@ -51,6 +51,7 @@
 
                 <h6 class="fw-bold mb-3 text-secondary">Or Submit Inquiry Form</h6>
                 <form action="{{ url_for('buy_property', prop_id=property.id) }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="mb-3">
                         <label for="name" class="form-label fw-semibold small">Full Name</label>
                         <input type="text" class="form-control" id="name" name="name" required placeholder="Enter your full name">

@@ -12,6 +12,7 @@
             <span class="badge fs-6 {% if conv['status'] == 'Open' %}bg-success{% else %}bg-secondary{% endif %} me-2">Status: {{ conv['status'] }}</span>
             {% if conv['status'] == 'Open' %}
             <form action="{{ url_for('agent_conversation', conv_id=conv['id']) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to end and close this conversation? The client will no longer be able to reply to this thread.');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="action" value="close">
                 <button type="submit" class="btn btn-danger btn-sm"><i class="fas fa-lock me-1"></i> End Conversation</button>
             </form>
@@ -37,6 +38,7 @@
         <div class="card-footer bg-white p-3">
             {% if conv['status'] == 'Open' %}
             <form action="{{ url_for('agent_conversation', conv_id=conv['id']) }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="action" value="reply">
                 <div class="input-group">
                     <input type="text" name="message" class="form-control" placeholder="Type your reply to the client..." required autocomplete="off">

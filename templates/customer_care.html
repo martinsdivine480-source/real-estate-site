@@ -64,6 +64,7 @@
                 <div class="card-footer bg-white p-3">
                     {% if active_conv['status'] == 'Open' %}
                     <form action="{{ url_for('customer_care') }}" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="action" value="reply_conv">
                         <input type="hidden" name="conv_id" value="{{ active_conv['id'] }}">
                         <div class="input-group">
@@ -100,6 +101,7 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <form action="{{ url_for('customer_care') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="action" value="new_conv">
                 <div class="modal-header">
                     <h5 class="modal-title fw-bold"><i class="fas fa-headset me-2 text-primary"></i>Start Customer Care Conversation</h5>
