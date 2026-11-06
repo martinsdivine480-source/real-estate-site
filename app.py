@@ -243,7 +243,9 @@ def crypto_pay():
 
         return redirect(url_for('crypto_deposit', payment_id=payment_id))
 
-    return render_template('crypto_pay.html', properties=PROPERTIES)
+    selected_prop = request.args.get('property', '')
+    selected_price = request.args.get('price', '')
+    return render_template('crypto_pay.html', properties=PROPERTIES, selected_prop=selected_prop, selected_price=selected_price)
 
 @app.route('/crypto-deposit/<int:payment_id>', methods=['GET', 'POST'])
 def crypto_deposit(payment_id):
@@ -251,10 +253,39 @@ def crypto_deposit(payment_id):
     cursor = conn.cursor()
     
     if request.method == 'POST':
-        cursor.execute("UPDATE crypto_payments SET status = 'Submitted / Awaiting Confirmation' WHERE id = ?", (payment_id,))
-        conn.commit()
+        cursor.execute("SELECT * FROM crypto_payments WHERE id = ?", (payment_id,))
+        payment = cursor.fetchone()
+        
+        if payment:
+            # Create or find an open conversation for this client & property
+            cursor.execute(
+                "SELECT id FROM conversations WHERE client_email = ? AND property_title = ? AND status = 'Open'",
+                (payment['payer_name'], payment['property_title'])
+            )
+            conv = cursor.fetchone()
+            if conv:
+                conv_id = conv['id']
+            else:
+                cursor.execute(
+                    "INSERT INTO conversations (client_name, client_email, client_phone, property_title, status) VALUES (?, ?, '', ?, 'Open')",
+                    (payment['payer_name'], payment['payer_name'], payment['property_title'])
+                )
+                conv_id = cursor.lastrowid
+
+            # Add automated notification message to chat
+            notif_msg = f"[Crypto Payment Submitted] TXN #{payment['id']} | Asset: {payment['crypto_type']} | Amount: ${payment['amount_usd']}. Please review my payment and screenshot."
+            cursor.execute(
+                "INSERT INTO conversation_messages (conversation_id, sender, message) VALUES (?, 'client', ?)",
+                (conv_id, notif_msg)
+            )
+            cursor.execute("UPDATE crypto_payments SET status = 'Submitted / Awaiting Confirmation' WHERE id = ?", (payment_id,))
+            conn.commit()
+            session['client_email'] = payment['payer_name']
+            conn.close()
+            flash("Payment submitted! Please upload your transaction screenshot or details in the chat below for agent verification.", "success")
+            return redirect(url_for('customer_care', conv_id=conv_id))
+
         conn.close()
-        flash("Payment notification sent to customer care agent! We will verify the blockchain transaction shortly.", "success")
         return redirect(url_for('crypto_pay'))
 
     cursor.execute("SELECT * FROM crypto_payments WHERE id = ?", (payment_id,))
